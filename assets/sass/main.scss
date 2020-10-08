@@ -1,0 +1,106 @@
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: bolder;
+}
+
+html, body {
+  background-color: #423b3b;
+  color: white;
+  font-size: calc(1vw + 1em);
+}
+
+body {
+  min-height: 100vh;
+  position: relative;
+}
+
+h1, h2, h3, h4 {
+  margin: 0px;
+}
+
+input, textarea, button, select {
+  outline: none;
+}
+
+button {
+  border: 0px;
+  border-radius: 0px;
+  padding: 0px;
+  margin: 0px;
+  color: white;
+  cursor: pointer;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-overflow-scrolling: touch;
+}
+
+$mainGreen: rgb(12, 146, 12);
+
+.top-bar {
+  display: flex;
+  width: 100%;
+  background-color: rgb(20, 20, 20);
+  padding: 20px 30px;
+  box-shadow: 1px 2px 6px black;
+  position: sticky;
+  top: 0px;
+  z-index: 3;
+  .send-midi, .play-midi {
+    display: block;
+    color: white;
+    background-color: $mainGreen;
+    border-radius: 8px;
+    padding: 5px 12px;
+    margin-right: 10px;
+  }
+  .bpm-box, .signature-box, .name-box {
+    font-size: 0.3em;
+    margin-left: 20px;
+    background-color: black;
+    border-radius: 5px;
+    padding: 4px 12px;
+  }
+}
+
+.track-wrap {
+  min-width: 100%;
+  background-color: black;
+  color: white;
+  font-size: 0.3em;
+  margin: 10px 0px;
+  .meta {
+    width: 300px;
+    height: 200px;
+    padding: 20px;
+    position: relative;
+    display: inline-block;
+    z-index: 2;
+    vertical-align: top;
+    .name {
+      width: 100%;
+      margin-bottom: 10px;
+    }
+    .switch {
+      display: block;
+      color: white;
+      background-color: $mainGreen;
+      border-radius: 8px;
+      padding: 5px 12px;
+    }
+  }
+  .track-wrapper {
+    width: calc(100% - 300px);
+    height: 200px;
+    overflow: hidden;
+    display: inline-block;
+    background-color: gray;
+    .track {
+      height: 100%;
+      position: relative;
+      z-index: 1;
+    }
+  }
+}
