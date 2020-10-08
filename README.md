@@ -1,1 +1,3 @@
-# midi-mania
+# Midi mania
+
+Work in progress
