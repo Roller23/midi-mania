@@ -1,6 +1,13 @@
 (() => {
   let get = selector => document.querySelector(selector);
-  let song = null;
+
+  let currentSong = {
+    song: null,
+    playing: false,
+    elapsed: 0
+  }
+
+  let lastTimestamp = undefined;
 
   let instruments = [
     {aliases: 'piano', name: 'acoustic_grand_piano', device: null},
@@ -18,6 +25,31 @@
     {aliases: 'bell', name: 'tinkle_bell', device: null},
     {aliases: 'cymbal', name: 'reverse_cymbal', device: null}
   ];
+
+  function step(timestamp) {
+    if (lastTimestamp === undefined) {
+      lastTimestamp = timestamp;
+    }
+    const elapsed = timestamp - lastTimestamp;
+    if (currentSong.playing) {
+      currentSong.elapsed += elapsed;
+      const percent = currentSong.elapsed / (currentSong.song.songLength * 1000);
+      if (percent > 1) {
+        currentSong.playing = false;
+        currentSong.elapsed = 0;
+      }
+      if (percent <= 1 && currentSong.playing) {
+        currentSong.song.tracks.forEach(track => {
+          if (track.notes.length === 0) return;
+          track.canvas.style.transform = `translateX(-${percent * 100}%)`;
+        });
+      }
+    }
+    lastTimestamp = timestamp;
+    window.requestAnimationFrame(step);
+  }
+
+  window.requestAnimationFrame(step);
 
   function parseJSON(string) {
     try {
@@ -60,10 +92,11 @@
       let json = parseJSON(this.responseText);
       if (json === null) return console.log('Response', this.responseText);
       console.log('json', json);
-      song = json.data;
-      if (song.secondsPerTick) {
-        let msPerTick = song.secondsPerTick * 1000;
-        song.tracks.forEach(track => {
+      currentSong.song = json.data;
+      
+      if (currentSong.song.secondsPerTick) {
+        let msPerTick = currentSong.song.secondsPerTick * 1000;
+        currentSong.song.tracks.forEach(track => {
           track.notes.forEach((note, i) => {
             track.notes[i].start *= msPerTick;
             track.notes[i].duration *= msPerTick;
@@ -76,28 +109,25 @@
   });
   
   get('#play-midi').addEventListener('click', e => {
-    if (!song) return alert('No song loaded!');
-    let start = undefined;
-    let songMs = song.songLength * 1000;
-    function step(timestamp) {
-      if (start === undefined) {
-        start = timestamp;
-      }
-      const elapsed = timestamp - start;
-      const percent = elapsed / songMs;
-      if (percent <= 1) {
-        song.tracks.forEach(track => {
-          if (track.notes.length === 0) return;
-          track.canvas.style.transform = `translateX(-${percent * 100}%)`;
-        });
-        window.requestAnimationFrame(step);
-      }
-    }
-    song.tracks.forEach(track => {
+    if (!currentSong.song) return;
+    currentSong.playing = true;
+    currentSong.song.tracks.forEach(track => {
       if (track.muted || track.notes.length === 0) return;
       playTrack(track, 'sawtooth', 0.05);
     });
-    window.requestAnimationFrame(step);
+  });
+
+  get('#pause-midi').addEventListener('click', e => {
+    if (!currentSong.song) return;
+    stopNotes();
+    currentSong.playing = false;
+  });
+
+  get('#stop-midi').addEventListener('click', e => {
+    if (!currentSong.song) return;
+    stopNotes();
+    currentSong.playing = false;
+    currentSong.elapsed = 0;
   });
   
   let context = null;
@@ -125,14 +155,11 @@
     });
   }
 
-  let playDevice = (device, id) => {
-    device.play(id);
-  }
-
   let playTrack = (track, wave, volume) => {
     // Change timing of all notes according to tempo
     for (const note of track.notes) {
-      setTimeout(() => {
+      if (!(note.start >= currentSong.elapsed)) continue;
+      note.timeout = setTimeout(() => {
         instruments.forEach(instrument => {
           instrument.aliases.split(',').forEach(alias => {
             if (track.name.toLowerCase().includes(alias)) {
@@ -147,8 +174,23 @@
         //   // play a few overtones at half the volume
         //   playNote(note.freq * i, note.duration, volume / 2, wave, note.id);
         // }
-      }, note.start);
+      }, note.start - currentSong.elapsed);
     }
+  }
+
+  let stopNotes = () => {
+    currentSong.song.tracks.forEach(track => {
+      stopTrack(track);
+    });
+  }
+  
+  let stopTrack = track => {
+    track.notes.forEach(note => {
+      if (note.timeout) {
+        clearTimeout(note.timeout);
+        delete note.timeout;
+      }
+    });
   }
 
   function switchTrack() {
@@ -156,26 +198,34 @@
     let id = +this.getAttribute('track-id');
     if (state === 'on') {
       this.setAttribute('state', 'off');
+      this.classList.add('off');
       this.innerText = 'Off';
-      song.tracks[id].muted = true;
+      currentSong.song.tracks[id].muted = true;
+      if (currentSong.playing) {
+        stopTrack(currentSong.song.tracks[id]);
+      }
     } else {
       this.setAttribute('state', 'on');
+      this.classList.remove('off');
       this.innerText = 'On';
-      song.tracks[id].muted = false;
+      currentSong.song.tracks[id].muted = false;
+      if (currentSong.playing) {
+        playTrack(currentSong.song.tracks[id], 'sawtooth', 0.05);
+      }
     }
   }
 
   let renderSong = () => {
-    get('.bpm-box').innerText = song.tempo + ' BPM';
-    get('.signature-box').innerText = song.timeSignature;
-    get('.name-box').innerText = song.songName || "Unknown";
+    get('.bpm-box').innerText = currentSong.song.tempo + ' BPM';
+    get('.signature-box').innerText = currentSong.song.timeSignature;
+    get('.name-box').innerText = currentSong.song.songName || "Unknown";
     let tracks = get('.tracks');
     while (tracks.firstChild) {
       tracks.removeChild(tracks.firstChild);
     }
-    let compression = Math.floor(15 * (song.songLength / 200));
-    let songMs = (song.songLength * 1000) / compression;
-    song.tracks.forEach((track, i) => {
+    let compression = Math.floor(15 * (currentSong.song.songLength / 200));
+    let songMs = (currentSong.song.songLength * 1000) / compression;
+    currentSong.song.tracks.forEach((track, i) => {
       if (track.notes.length === 0) return;
       let wrap = createElement('div', {class: 'track-wrap', 'track-id': i});
       let meta = createElement('div', {class: 'meta'});

@@ -47,7 +47,7 @@ button {
   top: 0px;
   z-index: 3;
 }
-.top-bar .send-midi, .top-bar .play-midi {
+.top-bar .btn {
   display: block;
   color: white;
   background-color: #0c920c;
@@ -89,6 +89,9 @@ button {
   background-color: #0c920c;
   border-radius: 8px;
   padding: 5px 12px;
+}
+.track-wrap .meta .switch.off {
+  background-color: #b43636;
 }
 .track-wrap .track-wrapper {
   width: calc(100% - 300px);

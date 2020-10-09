@@ -48,7 +48,7 @@ $mainGreen: rgb(12, 146, 12);
   position: sticky;
   top: 0px;
   z-index: 3;
-  .send-midi, .play-midi {
+  .btn {
     display: block;
     color: white;
     background-color: $mainGreen;
@@ -89,6 +89,9 @@ $mainGreen: rgb(12, 146, 12);
       background-color: $mainGreen;
       border-radius: 8px;
       padding: 5px 12px;
+      &.off {
+        background-color: rgb(180, 54, 54);
+      }
     }
   }
   .track-wrapper {
