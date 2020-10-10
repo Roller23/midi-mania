@@ -25,6 +25,29 @@
     {aliases: 'bell', name: 'tinkle_bell', device: null},
     {aliases: 'cymbal', name: 'reverse_cymbal', device: null}
   ];
+  let instrumentsLoaded = false;
+  let controllerInstrument = null;
+  let currentMidiInput = null;
+  let recording = false;
+  let recordingStart = 0;
+  let recordedNotes = [];
+
+  function loadInstruments(callback) {
+    if (instrumentsLoaded) {
+      return callback ? callback() : undefined;
+    };
+    instruments.forEach((instrument, i) => {
+      Soundfont.instrument(context, instrument.name).then(function(device) {
+        console.log(instrument.name, 'loaded')
+        instruments[i].device = device;
+      });
+    });
+    Soundfont.instrument(context, 'acoustic_grand_piano', {release: 5, sustain: 5}).then(device => {
+      controllerInstrument = device;
+      callback && callback();
+    });
+    instrumentsLoaded = true;
+  }
 
   function step(timestamp) {
     if (lastTimestamp === undefined) {
@@ -68,15 +91,9 @@
   }
 
   get('#send-midi').addEventListener('click', e => {
-    if (!context) {
-      console.log(instruments)
+    if (context === null) {
       context = new AudioContext();
-      instruments.forEach((instrument, i) => {
-        Soundfont.instrument(context, instrument.name).then(function(device) {
-          console.log(instrument.name, 'loaded')
-          instruments[i].device = device;
-        });
-      })
+      loadInstruments();
     }
     get('#midi-file').click();
   });
@@ -129,6 +146,65 @@
     currentSong.playing = false;
     currentSong.elapsed = 0;
   });
+
+  get('#connect-controller').addEventListener('click', e => {
+    if (context === null) {
+      context = new AudioContext();
+    }
+    loadInstruments(() => {
+      window.navigator.requestMIDIAccess().then(function(midiAccess) {
+        midiAccess.inputs.forEach(function(midiInput, i) {
+          console.log('Midi input found', midiInput)
+          get('.controller-box').innerText = 'Input conntected';
+          // controllerInstrument.listenToMidi(midiInput);
+          midiInput.addEventListener('midimessage', function(msg) {
+            if (msg.data[0] === 144) {
+              // keydown event
+              console.log('keydown', msg.data[1])
+              currentMidiInput = this;
+              get('.controller-box').innerText = this.name;
+              let note = msg.data[1];
+              controllerInstrument.play(note);
+              if (recording) {
+                recordedNotes.push({noteData: msg.data, start: Date.now() - recordingStart});
+              }
+            }
+            if (msg.data[0] === 128) {
+              // keyup event
+              console.log('keyup', msg.data[1])
+              if (recording) {
+                for (let j = recordedNotes.length - 1; j >= 0; j--) {
+                  if (recordedNotes[j].noteData[1] === msg.data[1]) {
+                    recordedNotes[j].duration = Date.now() - recordingStart - recordedNotes[j].start;
+                    break;
+                  }
+                }
+              }
+            }
+          })
+        });
+      });
+    });
+  });
+
+  get('#record-midi').addEventListener('click', function(e) {
+    if (!recording) {
+      if (!currentMidiInput) return alert('No midi input connected!');
+      recordingStart = Date.now();
+      recordedNotes = [];
+      recording = true;
+      this.innerText = 'Stop recording';
+    } else {
+      recording = false;
+      renderTrack(recordedNotes, Date.now() - recordingStart);
+      // setTimeout(() => {
+      //   recordedNotes.forEach(data => {
+      //     controllerInstrument.schedule(context.currentTime, [{time: (data.start / 1000), note: data.noteData[1]}])
+      //   });
+      // }, 2000);
+      this.innerText = 'Record';
+    }
+  })
   
   let context = null;
 
@@ -213,6 +289,41 @@
         playTrack(currentSong.song.tracks[id], 'sawtooth', 0.05);
       }
     }
+  }
+
+  let renderTrack = (notes, songMs) => {
+    console.log(notes);
+    let tracks = get('.tracks');
+    let compression = Math.floor(15 * ((songMs / 1000) / 200));
+    compression = 10;
+    songMs /= compression;
+    let wrap = createElement('div', {class: 'track-wrap', 'track-id': 'r'});
+    let meta = createElement('div', {class: 'meta'});
+    let name = createElement('div', {class: 'name'});
+    let btn = createElement('button', {class: 'switch', type: 'button', 'track-id': 'r', state: 'on'});
+    let trackCanvas = createElement('canvas', {class: 'track', height: 600, width: songMs});
+    let trackWrapper = createElement('div', {class: 'track-wrapper'});
+    trackWrapper.appendChild(trackCanvas);
+    name.innerText = 'Recording 1';
+    btn.innerText = 'On';
+    // btn.addEventListener('click', switchTrack); // to do
+    meta.appendChild(name);
+    meta.appendChild(btn);
+    wrap.appendChild(meta);
+    wrap.appendChild(trackWrapper);
+    tracks.appendChild(wrap);
+    let ctx = trackCanvas.getContext('2d');
+    ctx.fillStyle = "grey";
+    ctx.fillRect(0, 0, trackCanvas.width, trackCanvas.height);
+    notes.forEach(note => {
+      let y = (127 - note.noteData[1]);
+      for (let i = 0; i < 5; i++) {
+        ctx.beginPath();
+        ctx.moveTo(note.start / compression, y * 5 - i);
+        ctx.lineTo((note.start + note.duration) / compression, y * 5 - i);
+        ctx.stroke();
+      }
+    });
   }
 
   let renderSong = () => {

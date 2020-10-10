@@ -55,7 +55,7 @@ button {
   padding: 5px 12px;
   margin-right: 10px;
 }
-.top-bar .bpm-box, .top-bar .signature-box, .top-bar .name-box {
+.top-bar .bpm-box, .top-bar .signature-box, .top-bar .name-box, .top-bar .controller-box {
   font-size: 0.3em;
   margin-left: 20px;
   background-color: black;
