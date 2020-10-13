@@ -83,6 +83,13 @@ button {
   width: 100%;
   margin-bottom: 10px;
 }
+.track-wrap .meta .play {
+  display: block;
+  color: white;
+  background-color: #0c920c;
+  border-radius: 8px;
+  padding: 5px 12px;
+}
 .track-wrap .meta .switch {
   display: block;
   color: white;

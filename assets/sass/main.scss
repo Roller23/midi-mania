@@ -83,6 +83,13 @@ $mainGreen: rgb(12, 146, 12);
       width: 100%;
       margin-bottom: 10px;
     }
+    .play {
+      display: block;
+      color: white;
+      background-color: $mainGreen;
+      border-radius: 8px;
+      padding: 5px 12px;
+    }
     .switch {
       display: block;
       color: white;

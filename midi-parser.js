@@ -38,6 +38,11 @@ const midiEvents = {
   system_exclusive: 0xF0
 };
 
+function Chunk(name, data) {
+  this.name = name;
+  this.data = data;
+}
+
 function trackNote(id, name, freq, start, duration, vel) {
   this.id = id;
   this.name = name;
@@ -45,11 +50,6 @@ function trackNote(id, name, freq, start, duration, vel) {
   this.start = start;
   this.duration = duration;
   this.velocity = vel;
-}
-
-function Chunk(name, data) {
-  this.name = name;
-  this.data = data;
 }
 
 function Track(name, instrument) {
@@ -83,11 +83,6 @@ Track.prototype.endNote = function(id) {
       break;
     }
   }
-}
-
-function Note(name, baseFreq) {
-  this.name = name;
-  this.baseFreq = baseFreq;
 }
 
 function Parser() {

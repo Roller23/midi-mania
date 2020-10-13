@@ -1,9 +1,12 @@
+const socket = require("socket.io")
 const express = require('express')
 const fileUpload = require('express-fileupload')
 const path = require('path')
 const app = express()
 const port = 3000
 const midiParser = require('./midi-parser').parser;
+
+let currentTrack = null;
 
 app.use(express.static(path.join(__dirname, 'assets')))
 app.use(fileUpload())
@@ -27,6 +30,26 @@ app.post('/upload_midi_file', (req, res) => {
   res.status(200).send(JSON.stringify({data: result}));
 })
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(`Server listening at http://localhost:${port}`)
 })
+
+const io = socket(server)
+
+io.on('connection', socket => {
+  console.log('New socket');
+
+  socket.on('register track', data => {
+    currentTrack = data.track;
+    socket.emit('track registered');
+    console.log('Current track set to', currentTrack);
+  });
+
+  socket.on('get current track', () => {
+    socket.emit('current track', {track: currentTrack})
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Socket disconnected')
+  });
+});

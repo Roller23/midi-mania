@@ -1,4 +1,5 @@
 (() => {
+  let socket = io('http://localhost:3000');
   let get = selector => document.querySelector(selector);
 
   let currentSong = {
@@ -291,6 +292,11 @@
     }
   }
 
+  function sendTrack() {
+    let id = +this.getAttribute('track-id');
+    socket.emit('register track', {track: currentSong.song.tracks[id].notes});
+  }
+
   let renderTrack = (notes, songMs) => {
     console.log(notes);
     let tracks = get('.tracks');
@@ -342,14 +348,18 @@
       let meta = createElement('div', {class: 'meta'});
       let name = createElement('div', {class: 'name'});
       let btn = createElement('button', {class: 'switch', type: 'button', 'track-id': i, state: 'on'});
+      let play = createElement('button', {class: 'play', type: 'button', 'track-id': i});
       let trackCanvas = createElement('canvas', {class: 'track', height: 600, width: songMs});
       let trackWrapper = createElement('div', {class: 'track-wrapper'});
       trackWrapper.appendChild(trackCanvas);
       name.innerText = track.name;
       btn.innerText = 'On';
       btn.addEventListener('click', switchTrack);
+      play.addEventListener('click', sendTrack);
+      play.innerText = 'Play track';
       meta.appendChild(name);
       meta.appendChild(btn);
+      meta.appendChild(play);
       wrap.appendChild(meta);
       wrap.appendChild(trackWrapper);
       tracks.appendChild(wrap);
@@ -369,5 +379,9 @@
       });
     });
   }
+
+  socket.on('track registered', () => {
+    // insert iframe with the p5.js sketch
+  });
 
 })();
