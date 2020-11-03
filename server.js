@@ -23,7 +23,7 @@ app.post('/upload_midi_file', (req, res) => {
   let midiFile = req.files.midiFile; // input name
   console.log('Got a file:', midiFile.name)
 
-  if (midiFile.mimetype !== 'audio/mid') {
+  if (midiFile.name.split('.').pop() !== 'mid') {
     return res.status(415).send('Only .mid files are allowed.');
   }
   let result = midiParser.parseBuffer(midiFile.data);
